@@ -20,7 +20,7 @@ const Chat = () => {
 
   useEffect(() => {
     // Load initial messages
-    fetch(`${BACKEND_URL}/get_messages/?conversation_id=1`)
+    fetch(`${BACKEND_URL}get_messages/?conversation_id=1`)
       .then((response) => response.json())
       .then((data) => {
         console.log("Loaded messages", data);
