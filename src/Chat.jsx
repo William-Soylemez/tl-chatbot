@@ -48,7 +48,7 @@ const Chat = () => {
       "prompt": input,
       "conversation_id": 1,
     };
-    fetch(`${BACKEND_URL}/prompt/`, {
+    fetch(`${BACKEND_URL}prompt/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
