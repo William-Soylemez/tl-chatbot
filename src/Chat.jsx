@@ -9,24 +9,48 @@ const Status = Object.freeze({
 });
 
 
-const Chat = () => {
+const Chat = ({ conversation, setConversation }) => {
+  // If conversation doesn't exist, display message saying so
+  if (conversation === null) {
+    return (
+      <div className='border-4 border-amber-800 bg-green-100 rounded-sm p-5 w-full max-w-4xl mx-auto h-[75vh]'>
+        <div className='flex flex-col h-5/6 justify-center items-center'>
+          <p>Please select a conversation</p>
+        </div>
+      </div>
+    );
+  }
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
 
+  const [conversationState, setConversationState] = useState(Status.PENDING);
+
   const messagesEndRef = useRef(null);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     // Load initial messages
-    fetch(`${BACKEND_URL}get_messages/?conversation_id=1`)
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Loaded messages", data);
-        setMessages(data);
+    setConversationState(Status.PENDING);
+    fetch(`${BACKEND_URL}get_messages/?conversation_id=${conversation}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
       })
-  }, []);
+      .then((data) => {
+        setMessages(data);
+        setConversationState(Status.COMPLETED);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        setConversationState(Status.FAILED);
+      });
+  }, [conversation]);
 
   useEffect(() => {
     scrollToBottom();
@@ -46,7 +70,7 @@ const Chat = () => {
     // Prepare prompt
     const body = {
       "prompt": input,
-      "conversation_id": 1,
+      "conversation_id": conversation,
     };
     fetch(`${BACKEND_URL}prompt/`, {
       method: 'POST',
@@ -55,10 +79,13 @@ const Chat = () => {
       },
       body: JSON.stringify(body),
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json()
+      })
       .then((data) => {
-        console.log(data);
-
         // Update local state
         setMessages(newMessages.map((message) => {
           if (!message.is_user_entry && message.status === Status.PENDING) {
@@ -69,19 +96,49 @@ const Chat = () => {
       })
       .catch((error) => {
         console.error("Error:", error);
+
+        // Update local state
+        setMessages(newMessages.map((message) => {
+          if (!message.is_user_entry && message.status === Status.PENDING) {
+            return { ...message, contents: "Error retrieving response!", status: Status.FAILED };
+          }
+          return message;
+        }));
       });
   };
 
+  if (conversationState === Status.PENDING) {
+    return (
+      <div className='border-4 border-amber-800 bg-green-100 rounded-sm p-5 w-full max-w-4xl mx-auto h-[75vh]'>
+        <div className='flex flex-col h-5/6 justify-center items-center'>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (conversationState === Status.FAILED) {
+    return (
+      <div className='border-4 border-amber-800 bg-green-100 rounded-sm p-5 w-full max-w-4xl mx-auto h-[75vh]'>
+        <div className='flex flex-col h-5/6 justify-center items-center'>
+          <p className='text-red-600'>Error loading conversation</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className='border-4 border-amber-800 bg-green-100 rounded-sm p-5 max-w-4xl mx-auto h-4/5'>
+      <div className='border-4 border-amber-800 bg-green-100 rounded-sm p-5 w-full max-w-4xl mx-auto h-[75vh]'>
         {/* Messages */}
         <div className='flex flex-col h-5/6 overflow-y-auto'>
 
-          {messages.map((message) => (
+          {messages?.length > 0 && messages.map((message) => (
             <div key={message.message_id} className={
               'p-3 border-2 rounded-sm my-2 bg-white max-w-fit w-4/5 '
-              + (message.is_user_entry ? 'self-end' : 'self-start')
+              + (message.is_user_entry ? 'self-end' : 'self-start') + ' '
+              + (message.status === Status.PENDING ? 'animate-pulse' : '')
+              + (message.status === Status.FAILED ? 'bg-red-100' : '')
             }>
               <ReactMarkdown>{message.contents}</ReactMarkdown>
             </div>
