@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { BACKEND_URL } from "./constants/urls";
+import { FaTrashAlt } from 'react-icons/fa';
 
 const ConversationSelector = ({ conversation, setConversation }) => {
   const [conversations, setConversations] = useState([
@@ -40,7 +41,7 @@ const ConversationSelector = ({ conversation, setConversation }) => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ user_id: 1, name: newConversationName}),
+      body: JSON.stringify({ user_id: 1, name: newConversationName }),
     })
       .then((response) => {
         if (!response.ok) {
@@ -56,6 +57,23 @@ const ConversationSelector = ({ conversation, setConversation }) => {
 
   }
 
+  const deleteConversation = (conversation_id) => {
+    fetch(`${BACKEND_URL}delete_conversation/?conversation_id=${conversation_id}`, {
+      method: 'DELETE',
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
+      .then(() => {
+        setConversations(conversations.filter((c) => c.conversation_id !== conversation_id));
+        if (conversation === conversation_id) {
+          setConversation(conversations[0].conversation_id);
+        }
+      });
+    }
 
   return (
     <div className="m-5 border-4 border-amber-800 bg-green-100">
@@ -76,13 +94,21 @@ const ConversationSelector = ({ conversation, setConversation }) => {
         {conversations.map((c) => (
           <li
             key={c.conversation_id}
-            onClick={() => setConversation(c.conversation_id)}
-            className={
-              'cursor-pointer p-2 hover:bg-amber-800 hover:text-white'
-              + (conversation === c.conversation_id ? ' bg-amber-800 text-white' : '')
-            }
+            className="p-2 border-b-2 border-amber-800 flex flex-row items-center"
           >
-            {c.name}
+            <p
+              onClick={() => setConversation(c.conversation_id)}
+              className={
+                'cursor-pointer p-2 hover:bg-amber-800 hover:text-white w-4/5 mx-2'
+                + (conversation === c.conversation_id ? ' bg-amber-800 text-white' : '')
+              }
+            >
+              {c.name}
+            </p>
+            <FaTrashAlt size={20}
+              className='cursor-pointer' onClick={() => deleteConversation(c.conversation_id)}
+            />
+            
           </li>
         ))}
       </ul>
