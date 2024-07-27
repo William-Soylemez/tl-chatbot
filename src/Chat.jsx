@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BACKEND_URL } from './constants/urls';
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from './AuthProvider';
 
 const Status = Object.freeze({
   COMPLETED: 1,
@@ -10,16 +11,6 @@ const Status = Object.freeze({
 
 
 const Chat = ({ conversation, setConversation }) => {
-  // If conversation doesn't exist, display message saying so
-  if (conversation === null) {
-    return (
-      <div className='border-4 border-amber-800 bg-green-100 rounded-sm p-5 w-full max-w-4xl mx-auto h-[75vh]'>
-        <div className='flex flex-col h-5/6 justify-center items-center'>
-          <p>Please select a conversation</p>
-        </div>
-      </div>
-    );
-  }
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -32,16 +23,12 @@ const Chat = ({ conversation, setConversation }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const { fetchProtectedData } = useAuth();
+
   useEffect(() => {
     // Load initial messages
     setConversationState(Status.PENDING);
-    fetch(`${BACKEND_URL}get_messages/?conversation_id=${conversation}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
+    fetchProtectedData(`get_messages/?conversation_id=${conversation}`)
       .then((data) => {
         setMessages(data);
         setConversationState(Status.COMPLETED);
@@ -72,19 +59,7 @@ const Chat = ({ conversation, setConversation }) => {
       "prompt": input,
       "conversation_id": conversation,
     };
-    fetch(`${BACKEND_URL}prompt/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json()
-      })
+    fetchProtectedData(`prompt/`, body)
       .then((data) => {
         // Update local state
         setMessages(newMessages.map((message) => {
@@ -106,7 +81,19 @@ const Chat = ({ conversation, setConversation }) => {
         }));
       });
   };
+  
+  // If conversation doesn't exist, display message saying so
+  if (conversation === null) {
+    return (
+      <div className='border-4 border-amber-800 bg-green-100 rounded-sm p-5 w-full max-w-4xl mx-auto h-[75vh]'>
+        <div className='flex flex-col h-5/6 justify-center items-center'>
+          <p>Please select a conversation</p>
+        </div>
+      </div>
+    );
+  }
 
+  
   if (conversationState === Status.PENDING) {
     return (
       <div className='border-4 border-amber-800 bg-green-100 rounded-sm p-5 w-full max-w-4xl mx-auto h-[75vh]'>

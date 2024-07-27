@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BACKEND_URL } from "./constants/urls";
 import { FaTrashAlt } from 'react-icons/fa';
+import { useAuth } from "./AuthProvider";
 
 const ConversationSelector = ({ conversation, setConversation }) => {
   const [conversations, setConversations] = useState([
@@ -12,16 +13,11 @@ const ConversationSelector = ({ conversation, setConversation }) => {
 
   const [newConversationName, setNewConversationName] = useState("");
 
+  const { fetchProtectedData, isAuthenticated } = useAuth();
+
   useEffect(() => {
     // Fetch conversations
-    fetch(`${BACKEND_URL}get_conversations/?user_id=1`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        } else {
-          return response.json();
-        }
-      })
+    fetchProtectedData(`get_conversations/?user_id=1`)
       .then((data) => {
         setConversations(data);
         if (!conversation && data.length > 0) {
@@ -31,24 +27,12 @@ const ConversationSelector = ({ conversation, setConversation }) => {
       .catch((error) => {
         console.error("Error:", error);
       });
-  }, []);
+  }, [isAuthenticated]);
 
   const createNewConversation = () => {
     if (newConversationName === "") return;
 
-    fetch(`${BACKEND_URL}add_conversation/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ user_id: 1, name: newConversationName }),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
+    fetchProtectedData(`add_conversation/`, { name: newConversationName })
       .then((data) => {
         setConversations([...conversations, data.conversation]);
         setConversation(data.conversation.conversation_id);
@@ -58,15 +42,7 @@ const ConversationSelector = ({ conversation, setConversation }) => {
   }
 
   const deleteConversation = (conversation_id) => {
-    fetch(`${BACKEND_URL}delete_conversation/?conversation_id=${conversation_id}`, {
-      method: 'DELETE',
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
+    fetchProtectedData(`delete_conversation/?conversation_id=${conversation_id}`)
       .then(() => {
         setConversations(conversations.filter((c) => c.conversation_id !== conversation_id));
         if (conversation === conversation_id) {
