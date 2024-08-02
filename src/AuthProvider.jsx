@@ -50,11 +50,16 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ username, password }),
     });
 
+    if (!response) {
+      throw new Error('Login failed, try again later');
+    }
+    
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error('Login failed');
+      throw new Error(data.message);
     }
 
-    const data = await response.json();
     localStorage.setItem(TOKEN_KEY, data.token);
     setIsAuthenticated(true);
     return data;
@@ -75,11 +80,17 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ username, password }),
     });
 
-    if (!response.ok) {
+    
+    if (!response) {
       throw new Error('Registration failed');
     }
 
     const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.errors.username ?? 'Registration failed');
+    }
+
     localStorage.setItem(TOKEN_KEY, data.token);
     setIsAuthenticated(true);
     return data;

@@ -26,6 +26,9 @@ const Chat = ({ conversation, setConversation }) => {
   const { fetchProtectedData } = useAuth();
 
   useEffect(() => {
+    if (conversation === null) {
+      return;
+    }
     // Load initial messages
     setConversationState(Status.PENDING);
     fetchProtectedData(`get_messages/?conversation_id=${conversation}`)

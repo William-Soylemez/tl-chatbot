@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BACKEND_URL } from "./constants/urls";
 import { FaTrashAlt } from 'react-icons/fa';
 import { useAuth } from "./AuthProvider";
+import Button from './Button';
 
 const ConversationSelector = ({ conversation, setConversation }) => {
   const [conversations, setConversations] = useState([
@@ -12,6 +13,8 @@ const ConversationSelector = ({ conversation, setConversation }) => {
   ]);
 
   const [newConversationName, setNewConversationName] = useState("");
+
+  const [ error, setError ] = useState(null);
 
   const { fetchProtectedData, isAuthenticated } = useAuth();
 
@@ -32,22 +35,37 @@ const ConversationSelector = ({ conversation, setConversation }) => {
   const createNewConversation = () => {
     if (newConversationName === "") return;
 
+    setError(null);
+
     fetchProtectedData(`add_conversation/`, { name: newConversationName })
       .then((data) => {
         setConversations([...conversations, data.conversation]);
         setConversation(data.conversation.conversation_id);
         setNewConversationName("");
       })
+      .catch((error) => {
+        setError("Error creating conversation");
+      });
 
   }
 
   const deleteConversation = (conversation_id) => {
+    setError(null);
+
     fetchProtectedData(`delete_conversation/?conversation_id=${conversation_id}`)
       .then(() => {
-        setConversations(conversations.filter((c) => c.conversation_id !== conversation_id));
+        const newConversations = conversations.filter((c) => c.conversation_id !== conversation_id);
+        setConversations(newConversations);
         if (conversation === conversation_id) {
-          setConversation(conversations[0].conversation_id);
+          if (newConversations.length > 0) {
+            setConversation(newConversations[0].conversation_id);
+          } else {
+            setConversation(null);
+          }
         }
+      })
+      .catch((error) => {
+        setError("Error deleting conversation");
       });
     }
 
@@ -55,14 +73,21 @@ const ConversationSelector = ({ conversation, setConversation }) => {
     <div className="m-5 border-4 border-amber-800 bg-green-100">
       {/* Create conversation textbox */}
       <div className='flex flex-row justify-between items-center p-5'>
-        <input
-          type="text"
-          placeholder="Create new conversation"
-          className='p-2 border-2 border-amber-800'
-          value={newConversationName}
-          onChange={(e) => setNewConversationName(e.target.value)}
-        />
-        <button onClick={createNewConversation} className='p-2 bg-amber-800 border-2 border-amber-800 text-white'>Create</button>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            createNewConversation();
+          }}
+        >
+          <input
+            type="text"
+            placeholder="Create new conversation"
+            className='p-2 border-2 border-amber-800'
+            value={newConversationName}
+            onChange={(e) => setNewConversationName(e.target.value)}
+          />
+          <Button onClick={createNewConversation} className='p-2 bg-amber-800 border-2 border-amber-800 text-white'>Create</Button>
+        </form>
       </div>
 
       {/* List of conversations */}
@@ -81,13 +106,13 @@ const ConversationSelector = ({ conversation, setConversation }) => {
             >
               {c.name}
             </p>
-            <FaTrashAlt size={20}
-              className='cursor-pointer' onClick={() => deleteConversation(c.conversation_id)}
-            />
-            
+            <Button className='cursor-pointer' onClick={() => deleteConversation(c.conversation_id)}>
+              <FaTrashAlt size={20}/>
+            </Button>
           </li>
         ))}
       </ul>
+      {error && <p className='text-red-600 text-center m-3'>{error}</p>}
     </div>
   );
 }
